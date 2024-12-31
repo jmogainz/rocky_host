@@ -1,0 +1,40 @@
+# Use minimal Rocky Linux 9 as the base image
+FROM rockylinux:8-minimal
+
+# Install required dependencies
+RUN microdnf install -y \
+    wget \
+    openssl \
+    git \
+    ca-certificates \
+    && microdnf clean all
+
+# Download and install Miniconda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py310_23.10.0-1-Linux-x86_64.sh -O /tmp/miniconda.sh \
+    && /bin/bash /tmp/miniconda.sh -b -p /opt/conda \
+    && rm /tmp/miniconda.sh
+
+# Update PATH to include Miniconda
+ENV PATH="/opt/conda/bin:$PATH"
+
+# Extract the certificate from the remote server and add it to the trusted certificates
+RUN echo | openssl s_client -servername repo.torchtechnologies.com -connect repo.torchtechnologies.com:443 2>/dev/null | openssl x509 -outform PEM > /etc/pki/ca-trust/source/anchors/torchtech.crt
+
+# Download the DigiCert certificate
+RUN wget -q -O /etc/pki/ca-trust/source/anchors/DigiCertGlobalG2TLSRSASHA2562020CA1.crt https://cacerts.digicert.com/DigiCertGlobalG2TLSRSASHA2562020CA1.crt.pem
+
+# Update CA certificates
+RUN update-ca-trust extract
+
+# Configure Git to use the stored credentials, correct SSL certs, and set user details
+RUN git config --global credential.helper store \
+    && git config --global http.sslCAInfo /etc/ssl/certs/ca-bundle.crt \
+    && git config --global http.sslVerify true \
+    && git config --global user.name "Jacob Moore" \
+    && git config --global user.email "jmoore2@torchtechnologies.com"
+
+# Set the working directory (optional)
+WORKDIR /workspace
+
+# Add entry point (optional)
+CMD ["/bin/bash"]
