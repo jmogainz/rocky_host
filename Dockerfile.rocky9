@@ -2,13 +2,23 @@
 FROM rockylinux:9-minimal
 
 # Install required dependencies
-RUN microdnf install -y dnf
+RUN microdnf install -y dnf \
+    && microdnf clean all
 RUN dnf install -y \
     wget \
     openssl \
     git \
     ca-certificates \
-    sudo
+    sudo \
+    zsh \
+    pip \
+    which \
+    util-linux \
+    tar \
+    && dnf clean all
+
+# Install Supervisor using pip
+RUN pip3 install supervisor
 
 # Download and install Miniconda
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py310_23.10.0-1-Linux-x86_64.sh -O /tmp/miniconda.sh \
@@ -34,8 +44,27 @@ RUN git config --global credential.helper store \
     && git config --global user.name "Jacob Moore" \
     && git config --global user.email "jmoore2@torchtechnologies.com"
 
-# Set the working directory (optional)
+# Install Oh My Zsh
+RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended \
+    && usermod -s /usr/bin/zsh root
+
+# Copy the default .zshrc provided by Oh My Zsh
+RUN cp ~/.oh-my-zsh/templates/zshrc.zsh-template ~/.zshrc
+
+RUN curl -sSL https://github.com/ajeetdsouza/zoxide/releases/download/v0.9.6/zoxide-0.9.6-x86_64-unknown-linux-musl.tar.gz -o zoxide.tar.gz \
+    && tar -xzf zoxide.tar.gz \
+    && sudo mv zoxide /usr/local/bin/
+
+# Configure zsh to use zoxide
+RUN echo 'eval "$(zoxide init zsh)"' >> ~/.zshrc
+
+# Set the working directory
 WORKDIR /workspace
 
-# Add entry point (optional)
-CMD ["/bin/bash"]
+# Configure Supervisor to keep the container running
+RUN mkdir -p /var/log/supervisor
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Default command to run Supervisor
+CMD ["/usr/local/bin/supervisord"]
+
