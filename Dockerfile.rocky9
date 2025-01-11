@@ -15,6 +15,7 @@ RUN dnf install -y \
     which \
     util-linux \
     tar \
+    make \
     && dnf clean all
 
 # Install Supervisor using pip
