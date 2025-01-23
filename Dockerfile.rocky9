@@ -5,6 +5,7 @@ FROM rockylinux:9-minimal
 RUN microdnf install -y dnf \
     && microdnf clean all
 RUN dnf install -y \
+    epel-release \
     wget \
     openssl \
     git \
@@ -16,6 +17,9 @@ RUN dnf install -y \
     util-linux \
     tar \
     make \
+    neovim \
+    xclip \
+    tmux \
     && dnf clean all
 
 # Install Supervisor using pip
